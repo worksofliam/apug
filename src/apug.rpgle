@@ -1,6 +1,19 @@
         
         Ctl-Opt NoMain;
         
+        Dcl-Ds C Qualified;
+          LT Char(1) Inz('<');
+          MT Char(1) Inz('>');
+          FS Char(1) Inz('/');
+          BS Char(1) Inz('\');
+          EQ Char(1) Inz('=');
+          SM Char(1) Inz('"');
+          QT Char(1) Inz('''');
+          CM Char(1) Inz(',');
+          OB Char(1) Inz('(');
+          CB Char(1) Inz(')');
+        End-Ds;
+        
         Dcl-C LINE_LEN 512;
         
         Dcl-C TAG_LEN  10;
@@ -58,6 +71,16 @@
         dcl-pr CloseFile extproc('_C_IFS_fclose');
           *n pointer value;  //Misc pointer
         end-pr;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc APUG_SetDelims Export;
+          Dcl-Pi *N;
+            pDelims Char(10);
+          End-Pi;
+          
+          C = pDelims;
+        End-Proc;
         
         //----------------------------------------------
         

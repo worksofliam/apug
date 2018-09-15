@@ -13,6 +13,7 @@
           OB Char(1) Inz('(');
           CB Char(1) Inz(')');
           DT Char(1) Inz('.');
+          P  Char(1) Inz(x'BB');
         End-Ds;
         
         Dcl-C LINE_LEN 512;
@@ -77,7 +78,7 @@
         
         Dcl-Proc APUG_SetDelims Export;
           Dcl-Pi *N;
-            pDelims Char(10);
+            pDelims Char(12);
           End-Pi;
           
           C = pDelims;
@@ -194,15 +195,26 @@
           Endfor;
         
           //Conditional checking
-          lChar = %Subst(pLine:lSpaces+1:1);
-          If (lChar = C.DT);
-            CurrentElement.Tag = 'div';
-            CurrentElement.Properties(lPropIdx).Name = 'id';
-            lMode     = MODE_PROP;
-            lPropMode = MODE_PROP_VALUE;
+          
+          Select;
+            When (%Subst(pLine:lSpaces+1:1) = C.DT);
+              CurrentElement.Tag = 'div';
+              CurrentElement.Properties(lPropIdx).Name = 'id';
+              lMode     = MODE_PROP;
+              lPropMode = MODE_PROP_VALUE;
+              
+              lIsCond   = *On; 
+              lSpaces  += 1;
+              
+            When (%Subst(pLine:lSpaces+1:1) = C.P); //Pipe
+              OUTPUT += %TrimR(%Subst(pLine:lSpaces+2));
+              Return;
             
-            lIsCond   = *On; 
-            lSpaces  += 1;
+            When (%Subst(pLine:lSpaces+1:2) = C.FS + C.FS);
+              Return;
+          Endsl;
+          
+          If (%Subst(pLine:lSpaces+1:1) = C.DT);
           Endif;
         
           For lIndex = (lSpaces+1) to lLen;

@@ -12,6 +12,7 @@
           CM Char(1) Inz(',');
           OB Char(1) Inz('(');
           CB Char(1) Inz(')');
+          DT Char(1) Inz('.');
         End-Ds;
         
         Dcl-C LINE_LEN 512;
@@ -126,7 +127,7 @@
           
           //Add the unclosed tags!
           For lIndex = ClosingIndx downto 1;
-            OUTPUT += '</' + ClosingTags(lIndex).Tag + '>';
+            OUTPUT += C.LT + C.FS + ClosingTags(lIndex).Tag + C.MT;
           Endfor;
           
           Output += x'00';
@@ -187,14 +188,14 @@
           
           For lIndex = ClosingIndx downto 1;
             If (ClosingTags(ClosingIndx).Space >= lSpaces);
-              OUTPUT += '</' + ClosingTags(ClosingIndx).Tag + '>';
+              OUTPUT += C.LT + C.FS + ClosingTags(ClosingIndx).Tag + C.MT;
               ClosingIndx -= 1;
             Endif;
           Endfor;
         
           //Conditional checking
           lChar = %Subst(pLine:lSpaces+1:1);
-          If (lChar = '.');
+          If (lChar = C.DT);
             CurrentElement.Tag = 'div';
             CurrentElement.Properties(lPropIdx).Name = 'id';
             lMode     = MODE_PROP;
@@ -210,11 +211,11 @@
             Select;
               When (lMode = MODE_TAG);
                 Select;
-                  When (lChar = '('); //User is adding properties
+                  When (lChar = C.OB); //User is adding properties
                     lMode     = MODE_PROP;
                     lPropMode = MODE_PROP_KEY;
         
-                  When (lChar = ' ' OR lChar = '='); //Usually means no properties and just a value!
+                  When (lChar = ' ' OR lChar = C.EQ); //Usually means no properties and just a value!
                     lMode = MODE_VAL;
         
                   Other;
@@ -223,31 +224,31 @@
         
               When (lMode = MODE_PROP); //We're parsing the properties now!
                 Select;
-                  When (lChar = '\'); //Check if the user is added a quote mark
-                    If (%Subst(pLine:lIndex+1:1) = '''');
+                  When (lChar = C.BS); //Check if the user is added a quote mark
+                    If (%Subst(pLine:lIndex+1:1) = C.QT);
                       lChar = '';
                     Endif;
         
-                  When (lChar = ''''); //Check if it's the end of a string or the user is adding a quote mark
-                    If (%Subst(pLine:lIndex-1:1) <> '\');
+                  When (lChar = C.QT); //Check if it's the end of a string or the user is adding a quote mark
+                    If (%Subst(pLine:lIndex-1:1) <> C.BS);
                       lIsString = NOT lIsString;
                       lChar = '';
                     Endif;
         
-                  When (lChar = ')'); //Could be the end of the properties
+                  When (lChar = C.CB); //Could be the end of the properties
                     If (lIsString = *Off);
                       lChar = ''; //Add nothing, it's the end!
                       lMode = MODE_VAL;
                       lIndex += 1;
                     Endif;
         
-                  When (lChar = '='); //Next is the value to the key!
+                  When (lChar = C.EQ); //Next is the value to the key!
                     If (lIsString = *Off);
                       lPropMode = MODE_PROP_VALUE;
                       lChar = '';
                     Endif;
         
-                  When (lChar = ','); //Next prop!
+                  When (lChar = C.CM); //Next prop!
                     If (lIsString = *Off);
                       lPropIdx += 1;
                       lPropMode = MODE_PROP_KEY;
@@ -280,8 +281,8 @@
             If (CurrentElement.Properties(lIndex).Name <> *BLANK);
               OUTPUT += ' ' + CurrentElement.Properties(lIndex).Name;
               If (CurrentElement.Properties(lIndex).Value <> *BLANK);
-                OUTPUT += '="' + CurrentElement.Properties(lIndex).Value
-                       + '"';
+                OUTPUT += C.EQ + C.SM
+                       + CurrentElement.Properties(lIndex).Value + C.SM;
               Endif;
             Else;
               Leave;
@@ -293,11 +294,11 @@
             ClosingIndx += 1;
             ClosingTags(ClosingIndx).Tag   = CurrentElement.Tag;
             ClosingTags(ClosingIndx).Space = lSpaces; 
-            OUTPUT += '>';
+            OUTPUT += C.MT;
           Else;
             //Write close tag
-            OUTPUT += '>' + %Trim(CurrentElement.Value) + '</'
-                          + CurrentElement.Tag + '>';
+            OUTPUT += C.MT + %Trim(CurrentElement.Value) + C.LT + C.FS
+                           + CurrentElement.Tag + C.MT;
           Endif;
         
         End-Proc;

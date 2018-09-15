@@ -28,6 +28,9 @@
         Dcl-C MODE_PROP_KEY   4;
         Dcl-C MODE_PROP_VALUE 5;
         
+        Dcl-C MODE_VAL_CONST 6;
+        Dcl-C MODE_VAL_VAR   7;
+        
         //----------------------------------------------
         
         Dcl-S ClosingIndx Int(3) Inz(0);
@@ -41,9 +44,18 @@
           Value Varchar(256) Inz('');
         End-Ds;
         
+        Dcl-S  APUG_VarsList Pointer;
+        Dcl-S  APUG_VarPtr   Pointer;      
+        Dcl-Ds APUG_Variable Qualified Based(APUG_VarPtr);
+          Key   Varchar(128);
+          Value Varchar(1028);
+        End-Ds;
+        
         Dcl-S OUTPUT Varchar(8192) Inz('');
         
         //----------------------------------------------
+        
+        /copy 'headers/arraylist_h.rpgle'
         
         Dcl-Ds File_Temp Qualified Template;
           PathFile char(128);
@@ -86,6 +98,37 @@
         
         //----------------------------------------------
         
+        Dcl-Proc APUG_Init Export;
+          OUTPUT = '';
+        
+          ClosingIndx = 0;
+          Clear ClosingTags;
+          
+          APUG_VarsList = arraylist_create();
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc APUG_AddVar Export;
+          Dcl-Pi *N;
+            pKey   Pointer Value Options(*String);
+            pValue Pointer Value Options(*String);
+          End-Pi;
+          
+          APUG_VarPtr = %Alloc(%Size(APUG_Variable));
+          
+          APUG_Variable.Key   = %Str(pKey);
+          APUG_Variable.Value = %Str(pValue);
+          
+          arraylist_add(APUG_VarsList:
+                        %Addr(APUG_Variable):
+                        %Size(APUG_Variable));
+                        
+          Dealloc(NE) APUG_VarPtr;
+        End-Proc;
+        
+        //----------------------------------------------
+        
         Dcl-Proc APUG Export;
           Dcl-Pi *N Pointer;
             pPath Char(128) Const;
@@ -94,12 +137,6 @@
           Dcl-Ds pugSource LikeDS(File_Temp);
           Dcl-S  lIndex Int(3);
         
-          OUTPUT = '';
-        
-          ClosingIndx = 0;
-          Clear ClosingTags;
-        
-          ////pugSource.PathFile = %TrimL(pPath) + x'00';
           pugSource.PathFile = %TrimR(pPath) + x'00';
           pugSource.OpenMode = 'r' + x'00';
           pugSource.FilePtr  = OpenFile(%addr(pugSource.PathFile)
@@ -131,8 +168,9 @@
             OUTPUT += C.LT + C.FS + ClosingTags(lIndex).Tag + C.MT;
           Endfor;
           
-          Output += x'00';
+          arraylist_dispose(APUG_VarsList);
           
+          Output += x'00';
           Return %Addr(Output);
         
         End-Proc;
@@ -154,6 +192,9 @@
           Dcl-S lPropIdx  Int(3);
           Dcl-S lIsString Ind;
           Dcl-S lPropMode Int(3);
+          
+          Dcl-S lVarIndx  Int(5);
+          Dcl-S lEvalMode Int(3);
         
           Dcl-Ds CurrentElement Qualified;
             Tag        Varchar(TAG_LEN)   Inz('');
@@ -169,6 +210,8 @@
           lPropIdx  = 1;
           lPropMode = MODE_PROP_KEY;
           lIsCond   = *Off;
+          
+          lEvalMode  = MODE_VAL_CONST;
           
           // Processing starts beloww
           
@@ -227,8 +270,13 @@
                     lMode     = MODE_PROP;
                     lPropMode = MODE_PROP_KEY;
         
-                  When (lChar = ' ' OR lChar = C.EQ); //Usually means no properties and just a value!
+                  When (lChar = ' '); //Usually means no properties and just a const value!
                     lMode = MODE_VAL;
+                    lEvalMode = MODE_VAL_CONST;
+                    
+                  When (lChar = C.EQ); //Usually means no properties and just a variable!
+                    lMode = MODE_VAL;
+                    lEvalMode = MODE_VAL_VAR;
         
                   Other;
                     CurrentElement.Tag += lChar; //Append to the tag name
@@ -251,7 +299,15 @@
                     If (lIsString = *Off);
                       lChar = ''; //Add nothing, it's the end!
                       lMode = MODE_VAL;
-                      lIndex += 1;
+                      
+                      lChar = %Subst(pLine:lIndex+1:1);
+                      If (lChar = C.EQ); //It's a variable next!
+                        lIndex += 2;
+                        lEvalMode =  MODE_VAL_VAR;
+                      Else;
+                        lIndex += 1;
+                        lEvalMode =  MODE_VAL_CONST;
+                      Endif;
                     Endif;
         
                   When (lChar = C.EQ); //Next is the value to the key!
@@ -309,8 +365,39 @@
             OUTPUT += C.MT;
           Else;
             //Write close tag
-            OUTPUT += C.MT + %Trim(CurrentElement.Value) + C.LT + C.FS
-                           + CurrentElement.Tag + C.MT;
+            If (lEvalMode = MODE_VAL_CONST);
+              OUTPUT += C.MT + %Trim(CurrentElement.Value) + C.LT + C.FS
+                             + CurrentElement.Tag + C.MT;
+            Else;
+                OUTPUT += C.MT
+                       + GetVarIndex(%Trim(CurrentElement.Value))
+                       + C.LT + C.FS
+                       + CurrentElement.Tag + C.MT;
+            Endif;
           Endif;
         
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc GetVarIndex;
+          Dcl-Pi *N Like(APUG_Variable.Value);
+            pKey Pointer Value Options(*String);
+          End-Pi;
+          
+          Dcl-S lIndex Uns(10);
+          
+          If (arraylist_getSize(APUG_VarsList) = 0);
+            Return '';
+            
+          Else;
+            For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
+              APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
+                If (APUG_Variable.Key = %Str(pKey));
+                  Return APUG_Variable.Value;
+                Endif;
+            endfor;
+          Endif;
+          
+          Return '';
         End-Proc;

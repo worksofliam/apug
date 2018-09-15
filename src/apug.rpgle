@@ -297,17 +297,17 @@
         
                   When (lChar = C.CB); //Could be the end of the properties
                     If (lIsString = *Off);
-                      lChar = ''; //Add nothing, it's the end!
                       lMode = MODE_VAL;
                       
                       lChar = %Subst(pLine:lIndex+1:1);
                       If (lChar = C.EQ); //It's a variable next!
-                        lIndex += 2;
                         lEvalMode =  MODE_VAL_VAR;
                       Else;
-                        lIndex += 1;
                         lEvalMode =  MODE_VAL_CONST;
                       Endif;
+                      
+                      lIndex += 1;
+                      lChar = ''; //Add nothing, it's the end!
                     Endif;
         
                   When (lChar = C.EQ); //Next is the value to the key!

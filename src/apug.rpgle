@@ -286,7 +286,7 @@
             lSpaces -= 1;
           Endif;
           
-          OUTPUT += '<' + CurrentElement.Tag;
+          OUTPUT += C.LT + CurrentElement.Tag;
           
           //Append proerties if any
           For lIndex = 1 to %Elem(CurrentElement.Properties);

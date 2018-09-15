@@ -105,7 +105,9 @@
           For lIndex = ClosingIndx downto 1;
             OUTPUT += '</' + ClosingTags(lIndex).Tag + '>';
           Endfor;
-        
+          
+          Output += x'00';
+          
           Return %Addr(Output);
         
         End-Proc;
@@ -122,6 +124,7 @@
           Dcl-S lIndex    Int(5);
           Dcl-S lChar     Char(1);
           Dcl-S lSpaces   Int(3);
+          Dcl-S lIsCond   Ind;
         
           Dcl-S lPropIdx  Int(3);
           Dcl-S lIsString Ind;
@@ -138,8 +141,9 @@
           lLen  = %Len(%TrimR(pLine));
           lMode = MODE_TAG;
           lIsString = *Off;
-          lPropIdx = 1;
+          lPropIdx  = 1;
           lPropMode = MODE_PROP_KEY;
+          lIsCond   = *Off;
           
           // Processing starts beloww
           
@@ -164,6 +168,18 @@
               ClosingIndx -= 1;
             Endif;
           Endfor;
+        
+          //Conditional checking
+          lChar = %Subst(pLine:lSpaces+1:1);
+          If (lChar = '.');
+            CurrentElement.Tag = 'div';
+            CurrentElement.Properties(lPropIdx).Name = 'id';
+            lMode     = MODE_PROP;
+            lPropMode = MODE_PROP_VALUE;
+            
+            lIsCond   = *On; 
+            lSpaces  += 1;
+          Endif;
         
           For lIndex = (lSpaces+1) to lLen;
             lChar = %Subst(pLine:lIndex:1); //Current character
@@ -229,6 +245,10 @@
                 CurrentElement.Value += lChar;
             Endsl;
           Endfor;
+          
+          If (lIsCond);
+            lSpaces -= 1;
+          Endif;
           
           OUTPUT += '<' + CurrentElement.Tag;
           

@@ -250,7 +250,14 @@
               lSpaces  += 1;
               
             When (%Subst(pLine:lSpaces+1:1) = C.P); //Pipe
-              OUTPUT += %TrimR(%Subst(pLine:lSpaces+2));
+              lChar = %Subst(pLine:lSpaces+2:1);
+              
+              If (lChar = C.EQ);
+                OUTPUT += GetVarIndex(%TrimR(%Subst(pLine:lSpaces+3)));
+              Else;
+                OUTPUT += %TrimR(%Subst(pLine:lSpaces+2));
+              Endif;
+              
               Return;
             
             When (%Subst(pLine:lSpaces+1:2) = C.FS + C.FS);

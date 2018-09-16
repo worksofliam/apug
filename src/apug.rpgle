@@ -19,6 +19,7 @@
         
         Dcl-C LINE_LEN 512;
         
+        Dcl-C VAL_LEN  256;
         Dcl-C TAG_LEN  10;
         Dcl-C TAG_LVLS 20;
         
@@ -33,6 +34,8 @@
         Dcl-C MODE_VAL_VAR   7;
         
         //----------------------------------------------
+        
+        Dcl-S BlockStart  Int(5);
         
         Dcl-S ClosingIndx Int(3) Inz(0);
         Dcl-DS ClosingTags Qualified Dim(TAG_LVLS);
@@ -106,6 +109,8 @@
           Clear ClosingTags;
           
           APUG_VarsList = arraylist_create();
+          
+          BlockStart  = 0;
         End-Proc;
         
         //----------------------------------------------
@@ -187,7 +192,7 @@
           Dcl-S lLen      Int(5);
           Dcl-S lIndex    Int(5);
           Dcl-S lChar     Char(1);
-          Dcl-S lSpaces   Int(3);
+          Dcl-S lSpaces   Int(5);
           Dcl-S lIsCond   Ind;
         
           Dcl-S lPropIdx  Int(3);
@@ -200,7 +205,7 @@
           Dcl-Ds CurrentElement Qualified;
             Tag        Varchar(TAG_LEN)   Inz('');
             Properties LikeDS(Property_T) Inz Dim(5);
-            Value      Varchar(256) Inz('');
+            Value      Varchar(VAL_LEN) Inz('');
           End-Ds;
           
           //Default value for some variables
@@ -237,6 +242,14 @@
               ClosingIndx -= 1;
             Endif;
           Endfor;
+          
+          If (BlockStart <> 0);
+            If (lSpaces > BlockStart);
+              Return;
+            Else;
+              BlockStart = 0;
+            Endif;
+          Endif;
         
           //Conditional checking
           Select;
@@ -284,6 +297,17 @@
                     lPropMode = MODE_PROP_KEY;
         
                   When (lChar = ' '); //Usually means no properties and just a const value!
+                    If (IsConditionalStatement(CurrentElement.Tag));
+                      If (ProcessCondition(CurrentElement.Tag
+                                          :%TrimR(%Subst(pLine:lIndex+1))));
+                        BlockStart = 0;
+                      Else;
+                        BlockStart = lSpaces;
+                      Endif;
+                      
+                      Return;
+                    Endif;
+                    
                     lMode = MODE_VAL;
                     lEvalMode = MODE_VAL_CONST;
                     
@@ -393,6 +417,30 @@
         
         //----------------------------------------------
         
+        Dcl-Proc VarExists;
+          Dcl-Pi *N Ind;
+            pKey Pointer Value Options(*String);
+          End-Pi;
+          
+          Dcl-S lIndex Uns(10);
+          
+          If (arraylist_getSize(APUG_VarsList) = 0);
+            Return *Off;
+            
+          Else;
+            For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
+              APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
+                If (APUG_Variable.Key = %Str(pKey));
+                  Return *On;
+                Endif;
+            endfor;
+          Endif;
+          
+          Return *Off;
+        End-Proc;
+        
+        //----------------------------------------------
+        
         Dcl-Proc GetVarIndex;
           Dcl-Pi *N Like(APUG_Variable.Value);
             pKey Pointer Value Options(*String);
@@ -413,4 +461,30 @@
           Endif;
           
           Return '';
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc IsConditionalStatement;
+          Dcl-Pi *N Ind;
+            pCondition  Char(TAG_LEN) Const;
+          End-Pi;
+          
+          Return (pCondition = 'exists');
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc ProcessCondition;
+          Dcl-Pi *N Ind;
+            pCondition  Char(TAG_LEN) Const;
+            pExpression Pointer Value Options(*String);
+          End-Pi;
+          
+          Select;
+            When (pCondition = 'exists');
+              Return VarExists(pExpression);
+          Endsl;
+          
+          Return *Off;
         End-Proc;

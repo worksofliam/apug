@@ -13,7 +13,8 @@
           OB Char(1) Inz('(');
           CB Char(1) Inz(')');
           DT Char(1) Inz('.');
-          P  Char(1) Inz(x'BB');
+          P  Char(1) Inz(x'BB'); //Pipe
+          HS Char(1) Inz(x'4A'); //hash/pound
         End-Ds;
         
         Dcl-C LINE_LEN 512;
@@ -90,7 +91,7 @@
         
         Dcl-Proc APUG_SetDelims Export;
           Dcl-Pi *N;
-            pDelims Char(12);
+            pDelims Char(13) Const;
           End-Pi;
           
           C = pDelims;
@@ -238,11 +239,19 @@
           Endfor;
         
           //Conditional checking
-          
           Select;
-            When (%Subst(pLine:lSpaces+1:1) = C.DT);
+            When (%Subst(pLine:lSpaces+1:1) = C.DT); //Dot for class
               CurrentElement.Tag = 'div';
               CurrentElement.Properties(lPropIdx).Name = 'class';
+              lMode     = MODE_PROP;
+              lPropMode = MODE_PROP_VALUE;
+              
+              lIsCond   = *On; 
+              lSpaces  += 1;
+              
+            When (%Subst(pLine:lSpaces+1:1) = C.HS); //Hash for ID
+              CurrentElement.Tag = 'div';
+              CurrentElement.Properties(lPropIdx).Name = 'id';
               lMode     = MODE_PROP;
               lPropMode = MODE_PROP_VALUE;
               
@@ -263,9 +272,6 @@
             When (%Subst(pLine:lSpaces+1:2) = C.FS + C.FS);
               Return;
           Endsl;
-          
-          If (%Subst(pLine:lSpaces+1:1) = C.DT);
-          Endif;
         
           For lIndex = (lSpaces+1) to lLen;
             lChar = %Subst(pLine:lIndex:1); //Current character

@@ -242,7 +242,7 @@
           Select;
             When (%Subst(pLine:lSpaces+1:1) = C.DT);
               CurrentElement.Tag = 'div';
-              CurrentElement.Properties(lPropIdx).Name = 'id';
+              CurrentElement.Properties(lPropIdx).Name = 'class';
               lMode     = MODE_PROP;
               lPropMode = MODE_PROP_VALUE;
               

@@ -6,7 +6,7 @@
         
         APUG_Init();
         APUG_AddVar('hello':'This is awesome');
-        Ptr = APUG('./pug/test1.pug') + 2;
+        Ptr = APUG('./pug/test1.pug');
         
         Result = %Str(Ptr);
         

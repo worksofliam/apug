@@ -171,7 +171,7 @@
           arraylist_dispose(APUG_VarsList);
           
           Output += x'00';
-          Return %Addr(Output);
+          Return %Addr(Output) + 2;
         
         End-Proc;
         

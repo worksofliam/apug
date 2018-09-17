@@ -147,7 +147,7 @@
           Dcl-S lLine  Char(LINE_LEN);
           Dcl-S lIndex Int(3);
 
-          ProcessFile(pPath);
+          ProcessFile(pPath:0);
 
           //Now process all lines
           For CurrentLine = 0 to arraylist_getSize(pugSource) - 1;
@@ -171,10 +171,12 @@
 
         Dcl-Proc ProcessFile;
           Dcl-Pi *N;
-            pPath Char(128) Const;
+            pPath   Char(128) Const;
+            pSpaces Int(3)    Const;
           End-Pi;
 
           Dcl-Ds pugFile LikeDS(File_Temp);
+          Dcl-S  lSpaces Int(5);
         
           pugFile.PathFile = %TrimR(pPath) + x'00';
           pugFile.OpenMode = 'r' + x'00';
@@ -193,9 +195,15 @@
             //Line feed (LF)
             //Carriage return (CR)
             //Tab
-            pugFile.RtvData = %xlate(x'00250D05':'    ':pugFile.RtvData);
+            pugFile.RtvData = SpacePad(pSpaces) 
+                            + %xlate(x'00250D05':'    ':pugFile.RtvData);
         
-            //TODO: include keyword check here!
+            //include keyword check
+            lSpaces = SpaceCount(pugFile.RtvData);
+            If (%Subst(pugFile.RtvData:lSpaces+1:7) = 'include');
+              ProcessFile(%Subst(pugFile.RtvData:lSpaces+9):lSpaces);
+            Endif;
+
             arraylist_add(pugSource:
                           %Addr(pugFile.RtvData):
                           %Len(%TrimR(pugFile.RtvData)));
@@ -531,4 +539,22 @@
           Endfor;
 
           Return 0;
+        End-Proc;
+        
+        //----------------------------------------------
+
+        Dcl-Proc SpacePad;
+          Dcl-Pi *N Varchar(LINE_LEN);
+            pLength Int(3) Const;
+          End-Pi;
+
+          Dcl-S lResult Varchar(LINE_LEN);
+          Dcl-S lIndex  Int(3);
+
+          lResult = '';
+          For lIndex = 1 to pLength;
+            lResult += ' ';
+          Endfor;
+
+          Return lResult;
         End-Proc;

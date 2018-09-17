@@ -2,41 +2,16 @@
 
 apug is a version of the pugjs templating engine for ILE applications. It's primary purpose is for CGI applications.
 
-#### Example
+#### More info
 
-```
-body
-  title Hello world
-  
-  div(id='yo')
-    p(id='hi') Hello world
-    b This is a test!!!
+* [Available ILE APIs](https://github.com/WorksOfLiam/apug/wiki/APIs)
+* [apug Syntax Documentation](https://github.com/WorksOfLiam/apug/wiki/Syntax-examples)
 
-  div(id='hi')
-    p(id='hi') Hello world
-    b This is a test!!!
-```
+#### Building
 
-```
-Dcl-Pr APUG Pointer EXTPROC;
-  Path Char(128) Const;
-End-Pr;
+To make use of apug, you need to build these modules:
 
-Dcl-S Ptr    Pointer;
-Dcl-S Result Char(256);
+1. `src/arraylist.rpgle`
+2. `src/apug.rpgle`
 
-Ptr = APUG('/home/liam/apug/test.pug') + 2;
-
-Result = %Str(Ptr);
-
-Return;
-```
-
-```
-> EVAL Result                                                            
-  RESULT =                                                               
-            ....5...10...15...20...25...30...35...40...45...50...55...60 
-       1   '<body><title>Hello world</title><div id="yo"><p id="hi">Hell'
-      61   'o world</p><b>This is a test!!!</b></div><div id="hi"><p id='
-     121   '"hi">Hello world</p><b>This is a test!!!</b></div></body>   '
-```
+You should then bind these modules to the programs that you want to use apug with. You can optionally make a service program too.

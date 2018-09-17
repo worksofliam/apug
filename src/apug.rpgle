@@ -155,6 +155,7 @@
           //Now process all lines
           For CurrentLine = 0 to arraylist_getSize(pugSource) - 1;
             lLine = %Str(arraylist_get(pugSource : CurrentLine):LINE_LEN);
+            ProcessLine(lLine);
           Endfor;
           
           //Add the unclosed tags!
@@ -199,7 +200,7 @@
             //Carriage return (CR)
             //Tab
             pugFile.RtvData = SpacePad(pSpaces) 
-                            + %xlate(x'00250D05':'    ':pugFile.RtvData);i
+                            + %xlate(x'00250D05':'    ':pugFile.RtvData);
         
             //include keyword check
             lSpaces = SpaceCount(pugFile.RtvData);
@@ -531,6 +532,7 @@
 
           Dcl-S lIndex Int(5);
           Dcl-S lLen   Int(5);
+          Dcl-S lChar  Char(1);
 
           lLen = %Len(%TrimR(pLine));
 

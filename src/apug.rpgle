@@ -206,11 +206,11 @@
             lSpaces = SpaceCount(pugFile.RtvData);
             If (%Subst(pugFile.RtvData:lSpaces+1:7) = 'include');
               ProcessFile(%Subst(pugFile.RtvData:lSpaces+9):lSpaces);
+            Else;
+              arraylist_add(pugSource:
+                            %Addr(pugFile.RtvData):
+                            %Len(%TrimR(pugFile.RtvData)));
             Endif;
-
-            arraylist_add(pugSource:
-                          %Addr(pugFile.RtvData):
-                          %Len(%TrimR(pugFile.RtvData)));
 
             pugFile.RtvData = ' ';
           Enddo;

@@ -139,7 +139,7 @@
         
         //----------------------------------------------
         
-        Dcl-Proc APUG Export;
+        Dcl-Proc APUG_Execute Export;
           Dcl-Pi *N Pointer;
             pPath Char(128) Const;
           End-Pi;
@@ -252,14 +252,7 @@
           Endif;
         
           //Check if we need to close any existing tags.
-          lSpaces = 0;
-          For lIndex = 1 to lLen;
-            lChar = %Subst(pLine:lIndex:1); //Current character
-            If (lChar <> ' ');
-              lSpaces = lIndex-1;
-              Leave;
-            Endif;
-          Endfor;
+          lSpaces = SpaceCount(pLine);
           For lIndex = ClosingIndx downto 1;
             If (ClosingTags(ClosingIndx).Space >= lSpaces);
               OUTPUT += C.LT + C.FS + ClosingTags(ClosingIndx).Tag + C.MT;
@@ -407,7 +400,7 @@
           Endif;
           
           //Time to generate the output
-          
+
           OUTPUT += C.LT + CurrentElement.Tag;
           
           //Append proerties if any
@@ -516,4 +509,26 @@
           Endsl;
           
           Return *Off;
+        End-Proc;
+        
+        //----------------------------------------------
+
+        Dcl-Proc SpaceCount;
+          Dcl-Pi *N Int(5);
+            pLine Char(LINE_LEN);
+          End-Pi;
+
+          Dcl-S lIndex Int(5);
+          Dcl-S lLen   Int(5);
+
+          lLen = %Len(%TrimR(pLine));
+
+          For lIndex = 1 to lLen;
+            lChar = %Subst(pLine:lIndex:1); //Current character
+            If (lChar <> ' ');
+              Return lIndex-1;
+            Endif;
+          Endfor;
+
+          Return 0;
         End-Proc;

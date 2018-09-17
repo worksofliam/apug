@@ -32,6 +32,11 @@
         
         Dcl-C MODE_VAL_CONST 6;
         Dcl-C MODE_VAL_VAR   7;
+
+        Dcl-Ds Property_T Qualified Template;
+          Name  Varchar(10)  Inz('');
+          Value Varchar(256) Inz('');
+        End-Ds;
         
         //----------------------------------------------
         
@@ -44,11 +49,6 @@
         Dcl-DS ClosingTags Qualified Dim(TAG_LVLS);
           Tag   Varchar(TAG_LEN) Inz('');
           Space Int(3);
-        End-Ds;
-        
-        Dcl-Ds Property_T Qualified Template;
-          Name  Varchar(10)  Inz('');
-          Value Varchar(256) Inz('');
         End-Ds;
         
         Dcl-S  APUG_VarsList Pointer;

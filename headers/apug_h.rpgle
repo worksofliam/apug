@@ -2,7 +2,7 @@
         Dcl-Pr APUG_Init EXTPROC;
         End-Pr;
 
-        Dcl-Pr APUG Pointer EXTPROC;
+        Dcl-Pr APUG_Execute Pointer EXTPROC;
           Path Char(128) Const;
         End-Pr;
         

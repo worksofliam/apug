@@ -18,6 +18,9 @@
         End-Ds;
         
         Dcl-C LINE_LEN 512;
+
+        Dcl-C KEY_LEN   128;
+        Dcl-C VALUE_LEN 1024;
         
         Dcl-C VAL_LEN  256;
         Dcl-C TAG_LEN  10;
@@ -54,8 +57,8 @@
         Dcl-S  APUG_VarsList Pointer;
         Dcl-S  APUG_VarPtr   Pointer;      
         Dcl-Ds APUG_Variable Qualified Based(APUG_VarPtr);
-          Key   Varchar(128);
-          Value Varchar(1028);
+          Key   Varchar(KEY_LEN);
+          Value Varchar(VALUE_LEN);
         End-Ds;
         
         Dcl-S OUTPUT Varchar(8192) Inz('');
@@ -127,8 +130,8 @@
           
           APUG_VarPtr = %Alloc(%Size(APUG_Variable));
           
-          APUG_Variable.Key   = %Str(pKey);
-          APUG_Variable.Value = %Str(pValue);
+          APUG_Variable.Key   = %Str(pKey:KEY_LEN);
+          APUG_Variable.Value = %Str(pValue:VALUE_LEN);
           
           arraylist_add(APUG_VarsList:
                         %Addr(APUG_Variable):
@@ -151,7 +154,7 @@
 
           //Now process all lines
           For CurrentLine = 0 to arraylist_getSize(pugSource) - 1;
-            lLine = %Str(arraylist_get(pugSource : CurrentLine));
+            lLine = %Str(arraylist_get(pugSource : CurrentLine):LINE_LEN);
           Endfor;
           
           //Add the unclosed tags!
@@ -196,7 +199,7 @@
             //Carriage return (CR)
             //Tab
             pugFile.RtvData = SpacePad(pSpaces) 
-                            + %xlate(x'00250D05':'    ':pugFile.RtvData);
+                            + %xlate(x'00250D05':'    ':pugFile.RtvData);i
         
             //include keyword check
             lSpaces = SpaceCount(pugFile.RtvData);
@@ -460,7 +463,7 @@
           Else;
             For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
               APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
-                If (APUG_Variable.Key = %Str(pKey));
+                If (APUG_Variable.Key = %Str(pKey:KEY_LEN));
                   Return *On;
                 Endif;
             endfor;
@@ -484,7 +487,7 @@
           Else;
             For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
               APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
-                If (APUG_Variable.Key = %Str(pKey));
+                If (APUG_Variable.Key = %Str(pKey:KEY_LEN));
                   Return APUG_Variable.Value;
                 Endif;
             endfor;

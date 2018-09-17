@@ -36,6 +36,9 @@
         //----------------------------------------------
         
         Dcl-S BlockStart  Int(5);
+
+        Dcl-S pugSource   Pointer;
+        Dcl-S CurrentLine Int(5);
         
         Dcl-S ClosingIndx Int(3) Inz(0);
         Dcl-DS ClosingTags Qualified Dim(TAG_LVLS);
@@ -109,6 +112,7 @@
           Clear ClosingTags;
           
           APUG_VarsList = arraylist_create();
+          pugSource     = arraylist_create();
           
           BlockStart  = 0;
         End-Proc;
@@ -140,34 +144,15 @@
             pPath Char(128) Const;
           End-Pi;
           
-          Dcl-Ds pugSource LikeDS(File_Temp);
-          Dcl-S  lIndex Int(3);
-        
-          pugSource.PathFile = %TrimR(pPath) + x'00';
-          pugSource.OpenMode = 'r' + x'00';
-          pugSource.FilePtr  = OpenFile(%addr(pugSource.PathFile)
-                                        :%addr(pugSource.OpenMode));
-        
-          If (pugSource.FilePtr = *null);
-            OUTPUT = 'Failed to read file: ' + %TrimR(pPath);
-          EndIf;
-        
-          Dow  (ReadFile(%addr(pugSource.RtvData)
-                        :%Len(pugSource.RtvData)
-                        :pugSource.FilePtr) <> *null);
-        
-            //End of record null
-            //Line feed (LF)
-            //Carriage return (CR)
-            //Tab
-            pugSource.RtvData = %xlate(x'00'+x'25'+x'0D'+x'05'
-                                       :'    ':pugSource.RtvData);
-        
-            ProcessLine(pugSource.RtvData);
-            pugSource.RtvData = ' ';
-          Enddo;
-        
-          CloseFile(pugSource.FilePtr);
+          Dcl-S lLine  Char(LINE_LEN);
+          Dcl-S lIndex Int(3);
+
+          ProcessFile(pPath);
+
+          //Now process all lines
+          For CurrentLine = 0 to arraylist_getSize(pugSource) - 1;
+            lLine = %Str(arraylist_get(pugSource : CurrentLine));
+          Endfor;
           
           //Add the unclosed tags!
           For lIndex = ClosingIndx downto 1;
@@ -175,6 +160,7 @@
           Endfor;
           
           arraylist_dispose(APUG_VarsList);
+          arraylist_dispose(pugSource);
           
           Output += x'00';
           Return %Addr(Output) + 2;
@@ -182,10 +168,49 @@
         End-Proc;
         
         //----------------------------------------------
+
+        Dcl-Proc ProcessFile;
+          Dcl-Pi *N;
+            pPath Char(128) Const;
+          End-Pi;
+
+          Dcl-Ds pugFile LikeDS(File_Temp);
+        
+          pugFile.PathFile = %TrimR(pPath) + x'00';
+          pugFile.OpenMode = 'r' + x'00';
+          pugFile.FilePtr  = OpenFile(%addr(pugFile.PathFile)
+                                        :%addr(pugFile.OpenMode));
+        
+          If (pugFile.FilePtr = *null);
+            OUTPUT = 'Failed to read file: ' + %TrimR(pPath);
+          EndIf;
+        
+          Dow  (ReadFile(%addr(pugFile.RtvData)
+                        :%Len(pugFile.RtvData)
+                        :pugFile.FilePtr) <> *null);
+        
+            //End of record null
+            //Line feed (LF)
+            //Carriage return (CR)
+            //Tab
+            pugFile.RtvData = %xlate(x'00250D05':'    ':pugFile.RtvData);
+        
+            //TODO: include keyword check here!
+            arraylist_add(pugSource:
+                          %Addr(pugFile.RtvData):
+                          %Len(%TrimR(pugFile.RtvData)));
+
+            pugFile.RtvData = ' ';
+          Enddo;
+        
+          CloseFile(pugFile.FilePtr);
+        End-Proc;
+        
+        //----------------------------------------------
         
         Dcl-Proc ProcessLine;
           Dcl-Pi *N;
-            pLine Char(LINE_LEN) Const;
+            pLine Char(LINE_LEN);
           End-Pi;
         
           Dcl-S lMode     Int(3);
@@ -219,15 +244,15 @@
           
           lEvalMode  = MODE_VAL_CONST;
           
-          // Processing starts beloww
+          // Processing starts below
           
+          //No point running the line if it's blank!
           If (pLine = *Blank);
             Return;
           Endif;
         
           //Check if we need to close any existing tags.
           lSpaces = 0;
-          
           For lIndex = 1 to lLen;
             lChar = %Subst(pLine:lIndex:1); //Current character
             If (lChar <> ' ');
@@ -235,7 +260,6 @@
               Leave;
             Endif;
           Endfor;
-          
           For lIndex = ClosingIndx downto 1;
             If (ClosingTags(ClosingIndx).Space >= lSpaces);
               OUTPUT += C.LT + C.FS + ClosingTags(ClosingIndx).Tag + C.MT;
@@ -243,6 +267,7 @@
             Endif;
           Endfor;
           
+          //Check if inside block that cannot run
           If (BlockStart <> 0);
             If (lSpaces > BlockStart);
               Return;
@@ -286,6 +311,7 @@
               Return;
           Endsl;
         
+          //Now time to process the line
           For lIndex = (lSpaces+1) to lLen;
             lChar = %Subst(pLine:lIndex:1); //Current character
         
@@ -297,6 +323,7 @@
                     lPropMode = MODE_PROP_KEY;
         
                   When (lChar = ' '); //Usually means no properties and just a const value!
+                    //Check if it's a special keyword
                     If (IsConditionalStatement(CurrentElement.Tag));
                       If (ProcessCondition(CurrentElement.Tag
                                           :%TrimR(%Subst(pLine:lIndex+1))));
@@ -378,6 +405,8 @@
           If (lIsCond);
             lSpaces -= 1;
           Endif;
+          
+          //Time to generate the output
           
           OUTPUT += C.LT + CurrentElement.Tag;
           
@@ -470,7 +499,7 @@
             pCondition  Char(TAG_LEN) Const;
           End-Pi;
           
-          Return (pCondition = 'exists');
+          Return (pCondition = 'if');
         End-Proc;
         
         //----------------------------------------------
@@ -482,7 +511,7 @@
           End-Pi;
           
           Select;
-            When (pCondition = 'exists');
+            When (pCondition = 'if');
               Return VarExists(pExpression);
           Endsl;
           

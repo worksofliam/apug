@@ -43,7 +43,17 @@
         
         //----------------------------------------------
         
-        Dcl-S BlockStart  Int(5);
+        Dcl-Ds EachLoop Qualified;
+          AfterSpaces Int(5) Inz(0);  //What index is inside the each loop
+          Count       Int(5) Inz(0);  //How many times to loop
+          Line        Int(5) Inz(-1); //Restart from here
+          
+          ArrayName  Varchar(KEY_LEN) Inz(''); //Original array name
+          ItemName   Varchar(KEY_LEN) Inz(''); //Temp item name
+          CurrentInx Int(5)           Inz(-1);  //Current index
+        End-Ds;
+        
+        Dcl-S BlockStart   Int(5);
 
         Dcl-S pugSource   Pointer;
         Dcl-S CurrentLine Int(5);
@@ -118,6 +128,8 @@
           pugSource     = arraylist_create();
           
           BlockStart  = 0;
+          
+          Reset EachLoop;
         End-Proc;
         
         //----------------------------------------------
@@ -222,7 +234,7 @@
         
         Dcl-Proc ProcessLine;
           Dcl-Pi *N;
-            pLine Char(LINE_LEN);
+            pLine Char(LINE_LEN) Value;
           End-Pi;
         
           Dcl-S lMode     Int(3);
@@ -263,8 +275,32 @@
             Return;
           Endif;
         
-          //Check if we need to close any existing tags.
           lSpaces = SpaceCount(pLine);
+          
+          //Check if end of each block and go back if possible
+          If (EachLoop.AfterSpaces >= lSpaces);
+            If (EachLoop.CurrentInx < EachLoop.Count-1);
+              //Update temp variable
+              EachLoop.CurrentInx += 1;
+              CurrentLine = EachLoop.Line;
+              Return;
+                
+            Else;
+              //Delete temp variable
+              EachLoop.AfterSpaces = 0;
+              Reset EachLoop;
+            Endif;
+          Else;
+            If (EachLoop.CurrentInx >= 0);
+              pLine = %ScanRpl(EachLoop.ItemName:
+                               EachLoop.ArrayName + 
+                               '.' + %Char(EachLoop.CurrentInx):
+                               pLine:1:lLen + %Len(EachLoop.ArrayName));
+              lLen = %Len(%TrimR(pLine));
+            Endif;
+          Endif;
+          
+          //Check if we need to close any existing tags.
           For lIndex = ClosingIndx downto 1;
             If (ClosingTags(ClosingIndx).Space >= lSpaces);
               OUTPUT += C.LT + C.FS + ClosingTags(ClosingIndx).Tag + C.MT;
@@ -272,7 +308,7 @@
             Endif;
           Endfor;
           
-          //Check if inside block that cannot run
+          //Check if inside block that cannot run (if statement)
           If (BlockStart <> 0);
             If (lSpaces > BlockStart);
               Return;
@@ -305,7 +341,7 @@
               lChar = %Subst(pLine:lSpaces+2:1);
               
               If (lChar = C.EQ);
-                OUTPUT += GetVarIndex(%TrimR(%Subst(pLine:lSpaces+3)));
+                OUTPUT += GetVarByIndex(%TrimR(%Subst(pLine:lSpaces+3)));
               Else;
                 OUTPUT += %TrimR(%Subst(pLine:lSpaces+2));
               Endif;
@@ -332,9 +368,21 @@
                     If (IsConditionalStatement(CurrentElement.Tag));
                       If (ProcessCondition(CurrentElement.Tag
                                           :%TrimR(%Subst(pLine:lIndex+1))));
-                        BlockStart = 0;
+                        Select; //Can run block
+                          When (CurrentElement.Tag = 'if');
+                            BlockStart = 0;
+                          When (CurrentElement.Tag = 'each');
+                            EachLoop.AfterSpaces = lSpaces;
+                            //Create temp var
+                        Endsl;
+                        
                       Else;
-                        BlockStart = lSpaces;
+                        Select; //Cannot run block
+                          When (CurrentElement.Tag = 'if');
+                            BlockStart = lSpaces;
+                          When (CurrentElement.Tag = 'each');
+                            EachLoop.AfterSpaces = lSpaces;
+                        Endsl;
                       Endif;
                       
                       Return;
@@ -441,7 +489,7 @@
                              + CurrentElement.Tag + C.MT;
             Else;
                 OUTPUT += C.MT
-                       + GetVarIndex(%Trim(CurrentElement.Value))
+                       + GetVarByIndex(%Trim(CurrentElement.Value))
                        + C.LT + C.FS
                        + CurrentElement.Tag + C.MT;
             Endif;
@@ -452,30 +500,30 @@
         //----------------------------------------------
         
         Dcl-Proc VarExists;
-          Dcl-Pi *N Ind;
+          Dcl-Pi *N Int(10);
             pKey Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S lIndex Uns(10);
+          Dcl-S lIndex Int(10);
           
           If (arraylist_getSize(APUG_VarsList) = 0);
-            Return *Off;
+            Return -1;
             
           Else;
             For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
               APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
                 If (APUG_Variable.Key = %Str(pKey:KEY_LEN));
-                  Return *On;
+                  Return lIndex;
                 Endif;
             endfor;
           Endif;
           
-          Return *Off;
+          Return -1;
         End-Proc;
         
         //----------------------------------------------
         
-        Dcl-Proc GetVarIndex;
+        Dcl-Proc GetVarByIndex; 
           Dcl-Pi *N Like(APUG_Variable.Value);
             pKey Pointer Value Options(*String);
           End-Pi;
@@ -499,12 +547,50 @@
         
         //----------------------------------------------
         
+        Dcl-Proc VarArrayCount;
+          Dcl-Pi *N Int(5);
+            pKey Pointer Value Options(*String);
+          End-Pi;
+          
+          Dcl-S lLen   Int(3);
+          Dcl-S lKey   Varchar(128);
+          
+          Dcl-S lCount Int(5);
+          Dcl-S lIndex Uns(10);
+          
+          lCount = 0;
+          
+          lKey = %Str(pKey:KEY_LEN) + '.';
+          lLen = %Len(lKey);
+          
+          If (arraylist_getSize(APUG_VarsList) = 0);
+            Return 0;
+            
+          Else;
+            For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
+              APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
+                If (%Len(APUG_Variable.Key) >= lLen);
+                  If (%Subst(APUG_Variable.Key:1:lLen) = lKey);
+                    lCount += 1;
+                  Endif;
+                Endif;
+            endfor;
+          Endif;
+          
+          Return lCount;
+          
+        End-Proc;
+        
+        //----------------------------------------------
+        
         Dcl-Proc IsConditionalStatement;
           Dcl-Pi *N Ind;
             pCondition  Char(TAG_LEN) Const;
           End-Pi;
           
-          Return (pCondition = 'if');
+          Return (pCondition = 'if' OR
+                  pCondition = 'each'
+                 );
         End-Proc;
         
         //----------------------------------------------
@@ -515,12 +601,66 @@
             pExpression Pointer Value Options(*String);
           End-Pi;
           
+          Dcl-S lCount Int(5);
+          
           Select;
             When (pCondition = 'if');
-              Return VarExists(pExpression);
+              Return (VarExists(pExpression) >= 0);
+              
+            When (pCondition = 'each');
+              //PARSE STUFF
+              
+              Reset EachLoop;
+              ParseEach(pExpression);
+              
+              lCount = VarArrayCount(EachLoop.ArrayName);
+              EachLoop.Count = lCount;
+              
+              If (lCount > 0);
+                EachLoop.Line       = CurrentLine;
+                EachLoop.CurrentInx = 0;
+              Endif;
+              
+              Return (lCount > 0);
           Endsl;
           
           Return *Off;
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        //each Item in Items
+        Dcl-Proc ParseEach;
+          Dcl-Pi *N;
+            pExpression Pointer;
+          End-Pi;
+          
+          Dcl-S lPart  Int(3);
+          Dcl-S lIndex Int(3);
+          Dcl-S lChar  Char(1);
+          Dcl-S lParts Varchar(KEY_LEN) Dim(3);
+          Dcl-S lValue Varchar(KEY_LEN);
+          
+          lValue = %Str(pExpression:KEY_LEN);
+          lPart = 1;
+          
+          For lIndex = 1 to %Len(lValue);
+            lChar = %Subst(lValue:lIndex:1);
+            
+            If (lPart >= 4);
+              Leave;
+            Endif;
+            
+            If (lChar = ' ');
+              lPart += 1;
+            Else;
+              lParts(lPart) += lChar;
+            Endif;
+          Endfor;
+          
+          EachLoop.ItemName  = lParts(1);
+          EachLoop.ArrayName = lParts(3);
+          
         End-Proc;
         
         //----------------------------------------------

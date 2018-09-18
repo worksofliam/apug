@@ -56,14 +56,14 @@
           Space Int(3);
         End-Ds;
 
-        Dcl-Ds engine.Variable_T Qualified;
+        Dcl-Ds Variable_T Qualified;
           Key   Varchar(KEY_LEN);
           Value Varchar(VALUE_LEN);
         End-Ds;
         
         //----------------------------------------------
 
-        Dcl-Ds APUG_Engine_T Template;
+        Dcl-Ds APUG_Engine_T Qualified Template;
           EachLoop LikeDs(EachLoop_T); //each keyword
         
           BlockStart   Int(5); //if keyword
@@ -76,8 +76,7 @@
         
           VarsList Pointer; //Pointer to vars list
           VarPtr   Pointer; //Var pointer
-          Variable LikeDS(engine.Variable_T) 
-                   Based(APUG_Engine_T.VarPtr); //Variable template
+          Variable LikeDS(Variable_T); //Variable template
         
           OUTPUT Varchar(8192) Inz(''); //Result
         End-Ds;
@@ -128,24 +127,22 @@
         //----------------------------------------------
         
         Dcl-Proc APUG_Init Export;
-          Dcl-Pi *N Pointer End-Pr;
+          Dcl-Pi *N Pointer End-Pi;
 
           Dcl-S lPointer Pointer;
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(lPointer);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(lPointer);
 
           lPointer = %Alloc(%Size(APUG_Engine_T));
 
           engine.OUTPUT = '';
         
-          engine.engine.ClosingIndx = 0;
+          engine.ClosingIndx = 0;
           Clear engine.ClosingTags;
           
-          engine.engine.VarsList = arraylist_create();
+          engine.VarsList = arraylist_create();
           engine.source     = arraylist_create();
           
           engine.BlockStart  = 0;
-          
-          Reset engine.EachLoop;
 
           Return lPointer;
         End-Proc;
@@ -159,16 +156,16 @@
             pValue  Pointer Value Options(*String);
           End-Pi;
 
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           
-          engine.VarPtr = %Alloc(%Size(engine.Variable_T));
+          engine.VarPtr = %Alloc(%Size(engine.Variable));
           
           engine.Variable.Key   = %Str(pKey:KEY_LEN);
           engine.Variable.Value = %Str(pValue:VALUE_LEN);
           
           arraylist_add(engine.VarsList:
                         %Addr(engine.Variable):
-                        %Size(engine.Variable_T));
+                        %Size(Variable_T));
                         
           Dealloc(NE) engine.VarPtr;
         End-Proc;
@@ -181,7 +178,7 @@
             pPath   Char(128) Const;
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           Dcl-S lLine  Char(LINE_LEN);
           Dcl-S lIndex Int(3);
 
@@ -195,7 +192,8 @@
           
           //Add the unclosed tags!
           For lIndex = engine.ClosingIndx downto 1;
-            OUTPUT += C.LT + C.FS + ClosingTags(lIndex).Tag + C.MT;
+            engine.OUTPUT += C.LT + C.FS 
+                          + engine.ClosingTags(lIndex).Tag + C.MT;
           Endfor;
           
           arraylist_dispose(engine.VarsList);
@@ -215,7 +213,7 @@
             pSpaces Int(3)    Const;
           End-Pi;
 
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           Dcl-Ds pugFile LikeDS(File_Temp);
           Dcl-S  lSpaces Int(5);
         
@@ -225,7 +223,7 @@
                                      :%addr(pugFile.OpenMode));
         
           If (pugFile.FilePtr = *null);
-            OUTPUT = 'Failed to read file: ' + %TrimR(pPath);
+            engine.OUTPUT = 'Failed to read file: ' + %TrimR(pPath);
           EndIf;
         
           Dow  (ReadFile(%addr(pugFile.RtvData)
@@ -263,7 +261,7 @@
             pLine   Char(LINE_LEN) Value;
           End-Pi;
 
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
         
           Dcl-S lSkip     Ind;
           Dcl-S lMode     Int(3);
@@ -311,13 +309,12 @@
             If (engine.EachLoop.CurrentInx < engine.EachLoop.Count-1);
               //Update temp variable
               engine.EachLoop.CurrentInx += 1;
-              Line = engine.EachLoop.Line;
+              engine.Line = engine.EachLoop.Line;
               Return;
                 
             Else;
               //Delete temp variable
               engine.EachLoop.AfterSpaces = 0;
-              Reset EachLoop;
             Endif;
           Else;
             If (engine.EachLoop.CurrentInx >= 0);
@@ -332,9 +329,9 @@
           
           //Check if we need to close any existing tags.
           For lIndex = engine.ClosingIndx downto 1;
-            If (ClosingTags(engine.ClosingIndx).Space >= lSpaces);
+            If (engine.ClosingTags(engine.ClosingIndx).Space >= lSpaces);
               engine.OUTPUT += C.LT + C.FS
-                      + ClosingTags(engine.ClosingIndx).Tag + C.MT;
+                      + engine.ClosingTags(engine.ClosingIndx).Tag + C.MT;
               engine.ClosingIndx -= 1;
             Endif;
           Endfor;
@@ -373,7 +370,7 @@
               
               If (lChar = C.EQ);
                 engine.OUTPUT += 
-                    GetVarByIndex(%TrimR(%Subst(pLine:lSpaces+3)));
+                    GetVarByIndex(pEngine:%TrimR(%Subst(pLine:lSpaces+3)));
               Else;
                 engine.OUTPUT += %TrimR(%Subst(pLine:lSpaces+2));
               Endif;
@@ -540,7 +537,7 @@
             pKey    Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           Dcl-S lIndex Int(10);
           
           If (arraylist_getSize(engine.VarsList) = 0);
@@ -561,12 +558,12 @@
         //----------------------------------------------
         
         Dcl-Proc GetVarByIndex; 
-          Dcl-Pi *N Like(engine.Variable.Value);
+          Dcl-Pi *N Like(Variable_T.Value);
             pEngine Pointer;
             pKey Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           Dcl-S lIndex Uns(10);
           
           If (arraylist_getSize(engine.VarsList) = 0);
@@ -592,7 +589,7 @@
             pKey Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           
           Dcl-S lLen    Int(3);
           Dcl-S lNumLen Int(3);
@@ -653,24 +650,23 @@
             pExpression Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           Dcl-S lCount Int(5);
           
           Select;
             When (pCondition = 'if');
-              Return (VarExists(pExpression) >= 0);
+              Return (VarExists(pEngine:pExpression) >= 0);
               
             When (pCondition = 'each');
               //PARSE STUFF
               
-              Reset EachLoop;
-              ParseEach(pExpression);
+              ParseEach(pEngine:pExpression);
               
-              lCount = VarArrayCount(engine.EachLoop.ArrayName);
+              lCount = VarArrayCount(pEngine:engine.EachLoop.ArrayName);
               engine.EachLoop.Count = lCount;
               
               If (lCount > 0);
-                engine.EachLoop.Line       = Line;
+                engine.EachLoop.Line       = engine.Line;
                 engine.EachLoop.CurrentInx = 0;
               Endif;
               
@@ -689,7 +685,7 @@
             pExpression Pointer;
           End-Pi;
           
-          Dcl-S engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
 
           Dcl-S lPart  Int(3);
           Dcl-S lIndex Int(3);

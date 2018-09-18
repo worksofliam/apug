@@ -75,7 +75,6 @@
           ClosingTags LikeDS(ClosingTags_T) Dim(TAG_LVLS); //List of open tags
         
           VarsList Pointer; //Pointer to vars list
-          VarPtr   Pointer; //Var pointer
           Variable LikeDS(Variable_T); //Variable template
         
           OUTPUT Varchar(8192) Inz(''); //Result
@@ -158,16 +157,12 @@
 
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
           
-          engine.VarPtr = %Alloc(%Size(engine.Variable));
-          
           engine.Variable.Key   = %Str(pKey:KEY_LEN);
           engine.Variable.Value = %Str(pValue:VALUE_LEN);
           
           arraylist_add(engine.VarsList:
                         %Addr(engine.Variable):
                         %Size(Variable_T));
-                        
-          Dealloc(NE) engine.VarPtr;
         End-Proc;
         
         //----------------------------------------------
@@ -545,7 +540,8 @@
             
           Else;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.VarPtr = arraylist_get(engine.VarsList : lIndex);
+              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
+                                    :%Size(Variable_T));
                 If (engine.Variable.Key = %Str(pKey:KEY_LEN));
                   Return lIndex;
                 Endif;
@@ -571,7 +567,8 @@
             
           Else;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.VarPtr = arraylist_get(engine.VarsList : lIndex);
+              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
+                                    :%Size(Variable_T));
                 If (engine.Variable.Key = %Str(pKey:KEY_LEN));
                   Return engine.Variable.Value;
                 Endif;
@@ -613,7 +610,8 @@
           Else;
             lItem = 0;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.VarPtr = arraylist_get(engine.VarsList : lIndex);
+              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
+                                    :%Size(Variable_T));
                 lNumLen = %Len(%Char(lItem));
                 If (%Len(engine.Variable.Key) >= (lLen + lNumLen));
                   lCurrentKey = %Subst(engine.Variable.Key:1:lLen + lNumLen);

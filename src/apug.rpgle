@@ -552,13 +552,18 @@
             pKey Pointer Value Options(*String);
           End-Pi;
           
-          Dcl-S lLen   Int(3);
-          Dcl-S lKey   Varchar(128);
+          Dcl-S lLen    Int(3);
+          Dcl-S lNumLen Int(3);
           
+          Dcl-S lKey        Varchar(KEY_LEN);
+          Dcl-S lCurrentKey Varchar(KEY_LEN);
+          
+          Dcl-S lItem  Int(5);
           Dcl-S lCount Int(5);
           Dcl-S lIndex Uns(10);
           
           lCount = 0;
+          lItem  = 0;
           
           lKey = %Str(pKey:KEY_LEN) + '.';
           lLen = %Len(lKey);
@@ -567,11 +572,15 @@
             Return 0;
             
           Else;
+            lItem = 0;
             For lIndex = 0 to arraylist_getSize(APUG_VarsList) - 1;
               APUG_VarPtr = arraylist_get(APUG_VarsList : lIndex);
-                If (%Len(APUG_Variable.Key) >= lLen);
-                  If (%Subst(APUG_Variable.Key:1:lLen) = lKey);
+                lNumLen = %Len(%Char(lItem));
+                If (%Len(APUG_Variable.Key) >= (lLen + lNumLen));
+                  lCurrentKey = %Subst(APUG_Variable.Key:1:lLen + lNumLen);
+                  If (lCurrentKey = lKey + %Char(lItem));
                     lCount += 1;
+                    lItem  += 1;
                   Endif;
                 Endif;
             endfor;

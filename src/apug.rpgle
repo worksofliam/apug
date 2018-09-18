@@ -237,6 +237,7 @@
             pLine Char(LINE_LEN) Value;
           End-Pi;
         
+          Dcl-S lSkip     Ind;
           Dcl-S lMode     Int(3);
           Dcl-S lLen      Int(5);
           Dcl-S lIndex    Int(5);
@@ -355,6 +356,7 @@
           //Now time to process the line
           For lIndex = (lSpaces+1) to lLen;
             lChar = %Subst(pLine:lIndex:1); //Current character
+            lSkip = *Off;
         
             Select;
               When (lMode = MODE_TAG);
@@ -403,13 +405,13 @@
                 Select;
                   When (lChar = C.BS); //Check if the user is added a quote mark
                     If (%Subst(pLine:lIndex+1:1) = C.QT);
-                      lChar = '';
+                      lSkip = *On;
                     Endif;
         
                   When (lChar = C.QT); //Check if it's the end of a string or the user is adding a quote mark
                     If (%Subst(pLine:lIndex-1:1) <> C.BS);
                       lIsString = NOT lIsString;
-                      lChar = '';
+                      lSkip = *On;
                     Endif;
         
                   When (lChar = C.CB); //Could be the end of the properties
@@ -424,24 +426,24 @@
                       Endif;
                       
                       lIndex += 1;
-                      lChar = ''; //Add nothing, it's the end!
+                      lSkip = *On; //Add nothing, it's the end!
                     Endif;
         
                   When (lChar = C.EQ); //Next is the value to the key!
                     If (lIsString = *Off);
                       lPropMode = MODE_PROP_VALUE;
-                      lChar = '';
+                      lSkip = *On;
                     Endif;
         
                   When (lChar = C.CM); //Next prop!
                     If (lIsString = *Off);
                       lPropIdx += 1;
                       lPropMode = MODE_PROP_KEY;
-                      lChar = '';
+                      lSkip = *On;
                     Endif;
                 Endsl;
         
-                If (lChar <> *BLANK); //If the character is not blank, append to correct prop variable
+                If (lSkip = *Off); //If the character is not blank, append to correct prop variable
                   Select;
                     When (lPropMode = MODE_PROP_KEY);
                       CurrentElement.Properties(lPropIdx).Name += lChar;

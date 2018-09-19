@@ -1,9 +1,10 @@
 
-        Dcl-Pr APUG_Init EXTPROC;
+        Dcl-Pr APUG_Init Pointer EXTPROC;
         End-Pr;
 
         Dcl-Pr APUG_Execute Pointer EXTPROC;
-          Path Char(128) Const;
+          pEngine Pointer;
+          Path    Char(128) Const;
         End-Pr;
         
         Dcl-Pr APUG_SetDelims EXTPROC;
@@ -11,6 +12,7 @@
         End-Pr;
         
         Dcl-Pr APUG_AddVar EXTPROC;
-          pKey   Pointer Value Options(*String);
-          pValue Pointer Value Options(*String);
+          pEngine Pointer;
+          pKey    Pointer Value Options(*String);
+          pValue  Pointer Value Options(*String);
         End-Pr;

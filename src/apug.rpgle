@@ -64,7 +64,7 @@
         //----------------------------------------------
 
         Dcl-Ds APUG_Engine_T Qualified Template;
-          EachLoop LikeDs(EachLoop_T); //each keyword
+          EachLoop LikeDs(EachLoop_T) Inz; //each keyword
         
           BlockStart   Int(5); //if keyword
 
@@ -72,7 +72,7 @@
           Line Int(5);  //Current line
         
           ClosingIndx Int(3) Inz(0); //Closing tag index
-          ClosingTags LikeDS(ClosingTags_T) Dim(TAG_LVLS); //List of open tags
+          ClosingTags LikeDS(ClosingTags_T) Inz Dim(TAG_LVLS); //List of open tags
         
           VarsList Pointer; //Pointer to vars list
           Variable LikeDS(Variable_T); //Variable template
@@ -127,21 +127,25 @@
         
         Dcl-Proc APUG_Init Export;
           Dcl-Pi *N Pointer End-Pi;
-
+          
           Dcl-S lPointer Pointer;
-          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(lPointer);
+          Dcl-Ds engine   LikeDS(APUG_Engine_T) Based(lPointer);
 
           lPointer = %Alloc(%Size(APUG_Engine_T));
 
-          engine.OUTPUT = '';
-        
-          engine.ClosingIndx = 0;
+          //Reset the variables
+          
+          engine.EachLoop.Line = -1;
+          engine.EachLoop.ArrayName  = '';
+          engine.EachLoop.ItemName   = '';
+          engine.EachLoop.CurrentInx = -1;
+          
           Clear engine.ClosingTags;
           
           engine.VarsList = arraylist_create();
           engine.source     = arraylist_create();
           
-          engine.BlockStart  = 0;
+          engine.OUTPUT = '';
 
           Return lPointer;
         End-Proc;
@@ -155,13 +159,14 @@
             pValue  Pointer Value Options(*String);
           End-Pi;
 
-          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds engine   LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-Ds lVariable LikeDS(Variable_T);
           
-          engine.Variable.Key   = %Str(pKey:KEY_LEN);
-          engine.Variable.Value = %Str(pValue:VALUE_LEN);
+          lVariable.Key   = %Str(pKey:KEY_LEN);
+          lVariable.Value = %Str(pValue:VALUE_LEN);
           
           arraylist_add(engine.VarsList:
-                        %Addr(engine.Variable):
+                        %Addr(lVariable):
                         %Size(Variable_T));
         End-Proc;
         
@@ -533,16 +538,18 @@
           End-Pi;
           
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
-          Dcl-S lIndex Int(10);
+          
+          Dcl-S  lVarPtr   Pointer;
+          Dcl-Ds lVariable LikeDS(Variable_T) Based(lVarPtr);
+          Dcl-S  lIndex Int(10);
           
           If (arraylist_getSize(engine.VarsList) = 0);
             Return -1;
             
           Else;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
-                                    :%Size(Variable_T));
-                If (engine.Variable.Key = %Str(pKey:KEY_LEN));
+              lVarPtr = arraylist_get(engine.VarsList : lIndex);
+                If (lVariable.Key = %Str(pKey:KEY_LEN));
                   Return lIndex;
                 Endif;
             endfor;
@@ -560,17 +567,19 @@
           End-Pi;
           
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
-          Dcl-S lIndex Uns(10);
+          
+          Dcl-S  lVarPtr   Pointer;
+          Dcl-Ds lVariable LikeDS(Variable_T) Based(lVarPtr);
+          Dcl-S  lIndex    Uns(10);
           
           If (arraylist_getSize(engine.VarsList) = 0);
             Return '';
             
           Else;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
-                                    :%Size(Variable_T));
-                If (engine.Variable.Key = %Str(pKey:KEY_LEN));
-                  Return engine.Variable.Value;
+              lVarPtr = arraylist_get(engine.VarsList : lIndex);
+                If (lVariable.Key = %Str(pKey:KEY_LEN));
+                  Return lVariable.Value;
                 Endif;
             endfor;
           Endif;
@@ -587,6 +596,9 @@
           End-Pi;
           
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
+          
+          Dcl-S  lVarPtr   Pointer;
+          Dcl-Ds lVariable LikeDS(Variable_T) Based(lVarPtr);
           
           Dcl-S lLen    Int(3);
           Dcl-S lNumLen Int(3);
@@ -610,11 +622,10 @@
           Else;
             lItem = 0;
             For lIndex = 0 to arraylist_getSize(engine.VarsList) - 1;
-              engine.Variable = %Str(arraylist_get(engine.VarsList : lIndex)
-                                    :%Size(Variable_T));
+              lVarPtr = arraylist_get(engine.VarsList : lIndex);
                 lNumLen = %Len(%Char(lItem));
-                If (%Len(engine.Variable.Key) >= (lLen + lNumLen));
-                  lCurrentKey = %Subst(engine.Variable.Key:1:lLen + lNumLen);
+                If (%Len(lVariable.Key) >= (lLen + lNumLen));
+                  lCurrentKey = %Subst(lVariable.Key:1:lLen + lNumLen);
                   If (lCurrentKey = lKey + %Char(lItem));
                     lCount += 1;
                     lItem  += 1;

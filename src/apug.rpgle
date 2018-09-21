@@ -20,7 +20,7 @@
         Dcl-C LINE_LEN 512;
         Dcl-C SPACE_LEN 5; //For the int type
 
-        Dcl-S PATH_LEN  128;
+        Dcl-C PATH_LEN  128;
         Dcl-C KEY_LEN   128;
         Dcl-C VALUE_LEN 1024;
         

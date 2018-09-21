@@ -18,7 +18,9 @@
         End-Ds;
         
         Dcl-C LINE_LEN 512;
+        Dcl-C SPACE_LEN 5; //For the int type
 
+        Dcl-S PATH_LEN  128;
         Dcl-C KEY_LEN   128;
         Dcl-C VALUE_LEN 1024;
         
@@ -53,7 +55,7 @@
 
         Dcl-DS ClosingTags_T Qualified Template;
           Tag   Varchar(TAG_LEN) Inz('');
-          Space Int(3);
+          Space Int(SPACE_LEN);
         End-Ds;
 
         Dcl-Ds Variable_T Qualified;
@@ -85,7 +87,7 @@
         /copy 'headers/arraylist_h.rpgle'
         
         Dcl-Ds File_Temp Qualified Template;
-          PathFile char(128);
+          PathFile char(PATH_LEN);
           RtvData  char(LINE_LEN);
           OpenMode char(5);
           FilePtr  pointer inz;
@@ -175,7 +177,7 @@
         Dcl-Proc APUG_Execute Export;
           Dcl-Pi *N Pointer;
             pEngine Pointer;
-            pPath   Char(128) Const;
+            pPath   Char(PATH_LEN) Const;
           End-Pi;
           
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
@@ -209,8 +211,8 @@
         Dcl-Proc ProcessFile;
           Dcl-Pi *N;
             pEngine Pointer;
-            pPath   Char(128) Const;
-            pSpaces Int(3)    Const;
+            pPath   Char(PATH_LEN) Const;
+            pSpaces Int(SPACE_LEN)    Const;
           End-Pi;
 
           Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
@@ -268,7 +270,7 @@
           Dcl-S lLen      Int(5);
           Dcl-S lIndex    Int(5);
           Dcl-S lChar     Char(1);
-          Dcl-S lSpaces   Int(5);
+          Dcl-S lSpaces   Int(SPACE_LEN);
           Dcl-S lIsCond   Ind;
         
           Dcl-S lPropIdx  Int(3);
@@ -727,7 +729,7 @@
         //----------------------------------------------
 
         Dcl-Proc SpaceCount;
-          Dcl-Pi *N Int(5);
+          Dcl-Pi *N Int(SPACE_LEN);
             pLine Char(LINE_LEN);
           End-Pi;
 
@@ -751,11 +753,11 @@
 
         Dcl-Proc SpacePad;
           Dcl-Pi *N Varchar(LINE_LEN);
-            pLength Int(3) Const;
+            pLength Int(SPACE_LEN) Const;
           End-Pi;
 
           Dcl-S lResult Varchar(LINE_LEN);
-          Dcl-S lIndex  Int(3);
+          Dcl-S lIndex  Int(SPACE_LEN);
 
           lResult = '';
           For lIndex = 1 to pLength;

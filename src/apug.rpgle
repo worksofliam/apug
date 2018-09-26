@@ -15,6 +15,8 @@
           DT Char(1) Inz('.');
           P  Char(1) Inz(x'BB'); //Pipe
           HS Char(1) Inz(x'4A'); //hash/pound
+          SC Char(1) Inz(x'47');
+          SO Char(1) Inz(x'9C');
         End-Ds;
         
         Dcl-C LINE_LEN 512;
@@ -119,7 +121,7 @@
         
         Dcl-Proc APUG_SetDelims Export;
           Dcl-Pi *N;
-            pDelims Char(13) Const;
+            pDelims Char(15) Const;
           End-Pi;
           
           C = pDelims;
@@ -355,6 +357,9 @@
               engine.BlockStart = 0;
             Endif;
           Endif;
+          
+          ReplaceConstVars(pEngine:pLine);
+          lLen = %Len(%TrimR(pLine));
         
           //Conditional checking
           Select;
@@ -774,4 +779,36 @@
           Endfor;
 
           Return lResult;
+        End-Proc;
+        
+        //----------------------------------------------
+        
+        Dcl-Proc ReplaceConstVars;
+          Dcl-Pi *N;
+            pEngine     Pointer;
+            pLine       Char(LINE_LEN);
+          End-Pi;
+          
+          Dcl-Ds engine LikeDS(APUG_Engine_T) Based(pEngine);
+          Dcl-S  lIndex  Int(5);
+          Dcl-S  lLength Int(5);
+          Dcl-S  lVar    Varchar(KEY_LEN);
+        
+          lIndex = %Scan(C.HS + C.SO:pLine);
+          Dow (lIndex > 0);
+            lIndex += 2; //Move to start of name
+            lLength = %Scan(C.SC:pLine:lIndex);
+            
+            If (lLength > 0);
+              lLength -= lIndex;
+              
+              lVar = %Subst(pLine:lIndex:lLength);
+              pLine = %ScanRpl(C.HS + C.SO + lVar + C.SC:
+                               GetVarByIndex(pEngine:lVar):pLine);
+            Else;
+              Leave;
+            Endif;
+            
+            lIndex = %Scan(C.HS + C.SO:pLine);
+          Enddo;
         End-Proc;

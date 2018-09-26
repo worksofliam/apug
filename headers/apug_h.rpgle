@@ -8,7 +8,7 @@
         End-Pr;
         
         Dcl-Pr APUG_SetDelims EXTPROC;
-          pDelims Char(13) Const;
+          pDelims Char(15) Const;
         End-Pr;
         
         Dcl-Pr APUG_AddVar EXTPROC;

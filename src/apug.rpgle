@@ -74,10 +74,10 @@
           Line Int(5);  //Current line
         
           ClosingIndx Int(3) Inz(0); //Closing tag index
-          ClosingTags LikeDS(ClosingTags_T) Inz Dim(TAG_LVLS); //List of open tags
+          ClosingTags LikeDS(ClosingTags_T) Dim(TAG_LVLS); //List of open tags
         
           VarsList Pointer; //Pointer to vars list
-          Variable LikeDS(Variable_T); //Variable template
+          
         
           OUTPUT Varchar(8192) Inz(''); //Result
         End-Ds;
@@ -130,22 +130,31 @@
         Dcl-Proc APUG_Init Export;
           Dcl-Pi *N Pointer End-Pi;
           
-          Dcl-S lPointer Pointer;
+          Dcl-S  lPointer Pointer;
           Dcl-Ds engine   LikeDS(APUG_Engine_T) Based(lPointer);
+          Dcl-S  lIndex   Int(5);
 
           lPointer = %Alloc(%Size(APUG_Engine_T));
 
           //Reset the variables
           
-          engine.EachLoop.Line = -1;
+          engine.EachLoop.AfterSpaces = 0;
+          engine.EachLoop.Count = 0;
+          engine.EachLoop.Line  = -1;
           engine.EachLoop.ArrayName  = '';
           engine.EachLoop.ItemName   = '';
           engine.EachLoop.CurrentInx = -1;
           
-          Clear engine.ClosingTags;
+          engine.BlockStart = 0;
+          engine.ClosingIndx = 0;
+          
+          For lIndex = 1 to TAG_LVLS;
+            engine.ClosingTags(lIndex).Tag = '';
+            engine.ClosingTags(lIndex).Space = 0;
+          Endfor;
           
           engine.VarsList = arraylist_create();
-          engine.source     = arraylist_create();
+          engine.source   = arraylist_create();
           
           engine.OUTPUT = '';
 

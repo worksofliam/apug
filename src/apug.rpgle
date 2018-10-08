@@ -165,6 +165,21 @@
         
         //----------------------------------------------
         
+        Dcl-Proc APUG_Dealloc Export;
+          Dcl-Pi *N;
+            pEngine Pointer;
+          End-Pi;
+          
+          Dcl-Ds engine   LikeDS(APUG_Engine_T) Based(pEngine);
+          
+          arraylist_dispose(engine.VarsList);
+          arraylist_dispose(engine.source);
+          
+          Dealloc(NE) pEngine;
+        End-Proc;
+        
+        //----------------------------------------------
+        
         Dcl-Proc APUG_AddVar Export;
           Dcl-Pi *N;
             pEngine Pointer;
@@ -208,9 +223,6 @@
             engine.OUTPUT += C.LT + C.FS 
                           + engine.ClosingTags(lIndex).Tag + C.MT;
           Endfor;
-          
-          arraylist_dispose(engine.VarsList);
-          arraylist_dispose(engine.source);
           
           engine.Output += x'00';
           Return %Addr(engine.Output) + 2;

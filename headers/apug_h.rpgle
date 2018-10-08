@@ -1,6 +1,10 @@
 
         Dcl-Pr APUG_Init Pointer EXTPROC;
         End-Pr;
+        
+        Dcl-Pr APUG_Dealloc EXTPROC;
+          pEngine Pointer;
+        End-Pr;
 
         Dcl-Pr APUG_Execute Pointer EXTPROC;
           pEngine Pointer;

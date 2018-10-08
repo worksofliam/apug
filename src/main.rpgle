@@ -6,6 +6,8 @@
         Dcl-S Result  Char(256);
         Dcl-S JobUser Char(10) Inz(*USER);
         
+        Result = '';
+        
         Engine = APUG_Init();
         APUG_AddVar(Engine:'user':%Trim(JobUser));
         ResPtr = APUG_Execute(Engine:'./pug/test1.pug');

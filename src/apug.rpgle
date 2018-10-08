@@ -73,7 +73,7 @@
           BlockStart   Int(5); //if keyword
 
           source      Pointer; //Stores file source
-          Line Int(5);  //Current line
+          Line        Int(5);  //Current line
         
           ClosingIndx Int(3) Inz(0); //Closing tag index
           ClosingTags LikeDS(ClosingTags_T) Dim(TAG_LVLS); //List of open tags
@@ -211,6 +211,11 @@
           Dcl-S lIndex Int(3);
 
           ProcessFile(pEngine:pPath:0);
+
+          If (arraylist_getSize(engine.source) = 0);
+            //If there are no lines to process, return blank
+            Return %Addr(engine.Output) + 2;
+          Endif;
 
           //Now process all lines
           For engine.Line = 0 to arraylist_getSize(engine.source) - 1;
